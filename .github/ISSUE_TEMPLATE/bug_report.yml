@@ -1,0 +1,34 @@
+name: Bug Report
+description: Report a reproducible bug or unexpected behavior in fluidise-relay
+title: "fix: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thank you for reporting an issue! Please provide detailed steps to reproduce.
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Include repository setup, hook configuration, or CLI command used.
+      placeholder: |
+        1. fluidise-relay run --file .git/COMMIT_EDITMSG
+        2. Expected output: ...
+        3. Actual output: ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: What version or commit of fluidise-relay are you using?
+      placeholder: e.g. 0.1.0 (commit abc1234)
+    validations:
+      required: true

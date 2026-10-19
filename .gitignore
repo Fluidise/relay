@@ -1,0 +1,20 @@
+/target/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editors & IDEs
+.idea/
+.vscode/
+*.swp
+*~
+
+# Legacy / Agent caches
+.entire/
+.agents/
+.codex/
+
+# Worktrees
+.worktrees/

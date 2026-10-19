@@ -1,0 +1,81 @@
+name: PR Triage
+
+on:
+  pull_request_target:
+    types: [opened, ready_for_review, converted_to_draft]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  triage:
+    name: Triage Pull Request
+    runs-on: ubuntu-latest
+    steps:
+      - name: Auto-assign author and apply conventional labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+          TITLE: ${{ github.event.pull_request.title }}
+          BODY: ${{ github.event.pull_request.body }}
+          IS_DRAFT: ${{ github.event.pull_request.draft }}
+          ACTION: ${{ github.event.action }}
+        run: |
+          set -euo pipefail
+
+          # 1. Auto-assign PR author upon creation
+          if [ "$ACTION" = "opened" ]; then
+            echo "Assigning PR author @$PR_AUTHOR..."
+            gh pr edit "$PR_URL" --add-assignee "$PR_AUTHOR"
+          fi
+
+          # 2. Determine type label from branch prefix or Conventional Commit title
+          TYPE_LABEL=""
+          case "$BRANCH" in
+            feat/*) TYPE_LABEL="feat" ;;
+            fix/*) TYPE_LABEL="fix" ;;
+            chore/*) TYPE_LABEL="chore" ;;
+            docs/*) TYPE_LABEL="docs" ;;
+            ci/*) TYPE_LABEL="ci" ;;
+            refactor/*) TYPE_LABEL="refactor" ;;
+            test/*) TYPE_LABEL="test" ;;
+            perf/*) TYPE_LABEL="perf" ;;
+            build/*) TYPE_LABEL="build" ;;
+            *)
+              case "$TITLE" in
+                feat:*|feat\(*\):*) TYPE_LABEL="feat" ;;
+                fix:*|fix\(*\):*) TYPE_LABEL="fix" ;;
+                chore:*|chore\(*\):*) TYPE_LABEL="chore" ;;
+                docs:*|docs\(*\):*) TYPE_LABEL="docs" ;;
+                ci:*|ci\(*\):*) TYPE_LABEL="ci" ;;
+                refactor:*|refactor\(*\):*) TYPE_LABEL="refactor" ;;
+                test:*|test\(*\):*) TYPE_LABEL="test" ;;
+                perf:*|perf\(*\):*) TYPE_LABEL="perf" ;;
+                build:*|build\(*\):*) TYPE_LABEL="build" ;;
+              esac
+              ;;
+          esac
+
+          if [ -n "$TYPE_LABEL" ]; then
+            echo "Applying type label: $TYPE_LABEL"
+            gh pr edit "$PR_URL" --add-label "$TYPE_LABEL"
+          fi
+
+          # 3. Detect breaking changes
+          if [[ "$TITLE" =~ ^[a-z]+(\([^\)]+\))?!: ]] || [[ "$BODY" =~ BREAKING[[:space:]]CHANGE: ]]; then
+            echo "Applying breaking-change label..."
+            gh pr edit "$PR_URL" --add-label "breaking-change"
+          fi
+
+          # 4. Manage review status label based on draft status
+          if [ "$IS_DRAFT" = "true" ]; then
+            echo "PR is draft: applying work-in-progress label..."
+            gh pr edit "$PR_URL" --add-label "work-in-progress" --remove-label "needs-review"
+          else
+            echo "PR is ready for review: applying needs-review label..."
+            gh pr edit "$PR_URL" --add-label "needs-review" --remove-label "work-in-progress"
+          fi

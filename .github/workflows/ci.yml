@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Code Quality & MSRV
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Validate PR title (Conventional Commits)
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          CONVENTIONAL_REGEX="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9_-]+\))?: .+"
+          if ! echo "$PR_TITLE" | grep -qE "$CONVENTIONAL_REGEX"; then
+            echo "❌ PR title does not adhere to Conventional Commits: '$PR_TITLE'" >&2
+            echo "Expected: <type>(<scope>): <description>" >&2
+            exit 1
+          fi
+          echo "✅ PR title is valid: '$PR_TITLE'"
+
+      - name: Verify MSRV (Rust 1.88.0)
+        run: |
+          rustup toolchain install 1.88.0 --profile minimal --no-self-update
+          cargo +1.88.0 check --all-targets
+
+      - name: Security audit
+        uses: actions-rust-lang/audit@v1
+        with:
+          createIssues: false
+
+  test:
+    name: Test (${{ matrix.os }})
+    needs: quality
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.os }}
+
+      - name: Run Tests
+        run: cargo test --all-targets
