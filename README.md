@@ -31,6 +31,26 @@
 
 ---
 
+## Benchmarks at a Glance
+
+Evaluated directly against the leading Git hook managers across Rust, Go, Node.js, and Python:
+
+| Metric | `fluidise-relay` | `hk` (Rust) | `lefthook` (Go) | `husky` (Node.js) | `pre-commit` (Python) |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Orchestration Latency** | **44.0 ms** | 38.5 ms | 63.4 ms *(1.4x slower)* | 15.5 ms *(raw shim)* | 207.4 ms *(4.7x slower)* |
+| **Memory Footprint (RSS)** | **7.14 MB** | 15.98 MB *(2.2x RAM)* | 16.06 MB *(2.2x RAM)* | 7.09 MB *(raw shim)* | 35.20 MB *(4.9x RAM)* |
+| **CPU Instructions (Retired)** | **31.0 M** | 64.9 M *(2.1x)* | 71.6 M *(2.3x)* | 23.7 M | 945.7 M *(30.5x)* |
+| **Loop Throughput (50 commits)** | **24.1 /s** | 23.2 /s | 15.5 /s *(35% slower)* | 59.4 /s *(raw shim)* | 4.6 /s *(5.2x slower)* |
+| **Process Group Deadline** | **POSIX killpg (0 orphan)** | None (hangs) | None (hangs) | None (hangs) | None (hangs) |
+| **Bounded Capture Budget** | **256 KiB Guaranteed** | Unbounded | Unbounded | Unbounded | Unbounded |
+| **Worktree Git Isolation** | **Strict (local)** | Global (`~/.gitconfig`) | Shared (`.git/hooks`) | Repo-wide | Shared (`.git/hooks`) |
+| **Machine Output by Default** | **Strict JSON** | ANSI / Spinners | ANSI / Spinners | Plain text | Plain text |
+| **Binary / Footprint on Disk** | **0.7 MB (0 dep)** | 28.0 MB | 12.0 MB | 139.0 MB (+ Node.js) | 74.0 MB (+ Python) |
+
+See the complete 5-workload suite, CPU cycle profiling, and agent ergonomics analysis in [docs/benchmarks.md](docs/benchmarks.md).
+
+---
+
 ## Quick Start
 
 ### Building from Source
