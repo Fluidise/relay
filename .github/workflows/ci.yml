@@ -5,6 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+    types: [opened, synchronize, reopened, edited]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -17,33 +18,35 @@ jobs:
   quality:
     name: Code Quality & MSRV
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Install Rust stable toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master; explicit stable toolchain
         with:
+          toolchain: stable
           components: rustfmt, clippy
 
       - name: Cache Cargo dependencies
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
 
       - name: Check formatting
         run: cargo fmt --all -- --check
 
       - name: Run Clippy
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --locked --all-targets -- -D warnings
 
       - name: Validate PR title (Conventional Commits)
         if: github.event_name == 'pull_request'
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
         run: |
-          CONVENTIONAL_REGEX="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9_-]+\))?: .+"
-          if ! echo "$PR_TITLE" | grep -qE "$CONVENTIONAL_REGEX"; then
+          CONVENTIONAL_REGEX='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-zA-Z0-9_-]+\))?!?: .+$'
+          if ! printf '%s\n' "$PR_TITLE" | grep -qE "$CONVENTIONAL_REGEX"; then
             echo "❌ PR title does not adhere to Conventional Commits: '$PR_TITLE'" >&2
-            echo "Expected: <type>(<scope>): <description>" >&2
+            echo "Expected: <type>(<optional scope>)[!]: <description>" >&2
             exit 1
           fi
           echo "✅ PR title is valid: '$PR_TITLE'"
@@ -51,10 +54,10 @@ jobs:
       - name: Verify MSRV (Rust 1.88.0)
         run: |
           rustup toolchain install 1.88.0 --profile minimal --no-self-update
-          cargo +1.88.0 check --all-targets
+          cargo +1.88.0 check --locked --all-targets
 
       - name: Security audit
-        uses: actions-rust-lang/audit@v1
+        uses: actions-rust-lang/audit@72c09e02f132669d52284a3323acdb503cfc1a24 # v1
         with:
           createIssues: false
 
@@ -62,21 +65,24 @@ jobs:
     name: Test (${{ matrix.os }})
     needs: quality
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       fail-fast: true
       matrix:
         os: [ubuntu-latest, macos-latest]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Install Rust stable toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master; explicit stable toolchain
+        with:
+          toolchain: stable
 
       - name: Cache Cargo dependencies
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@e9d7b9f1e587218970671bac74e5511ed9506e6a # v2
         with:
           key: ${{ matrix.os }}
 
       - name: Run Tests
-        run: cargo test --all-targets
+        run: cargo test --locked --all-targets

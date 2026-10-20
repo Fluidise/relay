@@ -2,7 +2,7 @@ name: PR Triage
 
 on:
   pull_request_target:
-    types: [opened, ready_for_review, converted_to_draft]
+    types: [opened, reopened, edited, ready_for_review, converted_to_draft]
 
 permissions:
   pull-requests: write
@@ -12,6 +12,7 @@ jobs:
   triage:
     name: Triage Pull Request
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Auto-assign author and apply conventional labels
         env:
@@ -46,36 +47,47 @@ jobs:
             perf/*) TYPE_LABEL="perf" ;;
             build/*) TYPE_LABEL="build" ;;
             *)
-              case "$TITLE" in
-                feat:*|feat\(*\):*) TYPE_LABEL="feat" ;;
-                fix:*|fix\(*\):*) TYPE_LABEL="fix" ;;
-                chore:*|chore\(*\):*) TYPE_LABEL="chore" ;;
-                docs:*|docs\(*\):*) TYPE_LABEL="docs" ;;
-                ci:*|ci\(*\):*) TYPE_LABEL="ci" ;;
-                refactor:*|refactor\(*\):*) TYPE_LABEL="refactor" ;;
-                test:*|test\(*\):*) TYPE_LABEL="test" ;;
-                perf:*|perf\(*\):*) TYPE_LABEL="perf" ;;
-                build:*|build\(*\):*) TYPE_LABEL="build" ;;
-              esac
+              if [[ "$TITLE" =~ ^(feat|fix|chore|docs|ci|refactor|test|perf|build)(\([a-zA-Z0-9_-]+\))?!?: ]]; then
+                TYPE_LABEL="${BASH_REMATCH[1]}"
+              fi
               ;;
           esac
 
-          if [ -n "$TYPE_LABEL" ]; then
-            echo "Applying type label: $TYPE_LABEL"
-            gh pr edit "$PR_URL" --add-label "$TYPE_LABEL"
-          fi
+          DESIRED_LABELS=()
+          [ -z "$TYPE_LABEL" ] || DESIRED_LABELS+=("$TYPE_LABEL")
 
           # 3. Detect breaking changes
           if [[ "$TITLE" =~ ^[a-z]+(\([^\)]+\))?!: ]] || [[ "$BODY" =~ BREAKING[[:space:]]CHANGE: ]]; then
-            echo "Applying breaking-change label..."
-            gh pr edit "$PR_URL" --add-label "breaking-change"
+            DESIRED_LABELS+=("breaking-change")
           fi
 
           # 4. Manage review status label based on draft status
           if [ "$IS_DRAFT" = "true" ]; then
-            echo "PR is draft: applying work-in-progress label..."
-            gh pr edit "$PR_URL" --add-label "work-in-progress" --remove-label "needs-review"
+            DESIRED_LABELS+=("work-in-progress")
           else
-            echo "PR is ready for review: applying needs-review label..."
-            gh pr edit "$PR_URL" --add-label "needs-review" --remove-label "work-in-progress"
+            DESIRED_LABELS+=("needs-review")
           fi
+
+          # Reconcile owned labels after edits; preserve all unrelated labels.
+          CURRENT_LABELS="$(gh pr view "$PR_URL" --json labels --jq '.labels[].name')"
+          LABEL_ARGS=()
+          for label in "${DESIRED_LABELS[@]}"; do
+            LABEL_ARGS+=(--add-label "$label")
+          done
+          while IFS= read -r label; do
+            case "$label" in
+              feat|fix|chore|docs|ci|refactor|test|perf|build|breaking-change|work-in-progress|needs-review)
+                keep=false
+                for desired in "${DESIRED_LABELS[@]}"; do
+                  if [ "$label" = "$desired" ]; then
+                    keep=true
+                    break
+                  fi
+                done
+                if [ "$keep" = false ]; then
+                  LABEL_ARGS+=(--remove-label "$label")
+                fi
+                ;;
+            esac
+          done <<< "$CURRENT_LABELS"
+          gh pr edit "$PR_URL" "${LABEL_ARGS[@]}"
