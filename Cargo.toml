@@ -26,3 +26,7 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
+
+# Recovery tests repeatedly hash native delegates; keep this work optimized.
+[profile.test]
+opt-level = 1
