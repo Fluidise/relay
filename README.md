@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/banner.png" alt="Fluidise Relay — emerald tidal currents flowing between coastal islands" width="100%">
+</p>
+
 <h1 align="center">fluidise-relay</h1>
 
 <p align="center">
