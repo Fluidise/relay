@@ -1172,8 +1172,7 @@ mod recovery_tests {
             }
         }
     }
-    #[test]
-    fn every_persistent_publication_boundary_recovers() {
+    fn assert_publication_boundaries_recover(case: &str) {
         fn operation(case: &str) -> &str {
             match case {
                 "install-delegate" | "install-symlink" | "update-retired" => "install",
@@ -1236,61 +1235,85 @@ mod recovery_tests {
             }
             f
         }
-        let mut total = 0;
-        for case in [
-            "prepare",
-            "install",
-            "install-delegate",
-            "install-symlink",
-            "update-retired",
-            "approve",
-            "uninstall",
-            "uninstall-staged",
-            "uninstall-new-config",
-            "unprepare",
-        ] {
-            let baseline = fixture(case);
+        let baseline = fixture(case);
+        persistence_fault::arm(None);
+        assert_eq!(baseline.apply(operation(case)).1, 0);
+        let trace = persistence_fault::trace();
+        assert!(!trace.is_empty(), "{case}");
+        for (index, point) in trace.iter().enumerate() {
             persistence_fault::arm(None);
-            assert_eq!(baseline.apply(operation(case)).1, 0);
-            let trace = persistence_fault::trace();
-            assert!(!trace.is_empty(), "{case}");
-            for (index, point) in trace.iter().enumerate() {
-                persistence_fault::arm(None);
-                let f = fixture(case);
-                persistence_fault::arm(Some(index));
-                let (result, code) = f.apply(operation(case));
-                let recorded = persistence_fault::trace();
-                persistence_fault::arm(None);
-                assert_eq!(code, 2, "{case} {index} {point:?}: {result}");
-                assert_eq!(
-                    result["diagnostics"][0]["code"], "test.persistence_failure",
-                    "{result}"
-                );
-                assert_eq!(recorded.last(), Some(point), "{case} {index}");
-                assert!(!f.root.join("unexpected-execution").exists());
-                assert_eq!(
-                    f.apply(operation(case)).1,
-                    0,
-                    "resume {case} {index} {point:?}"
-                );
-                if let Some(state) = f.repo.state().unwrap()
-                    && state["phase"] == "active"
-                {
-                    runner::verify_owned(&f.repo, &state).unwrap();
-                }
-                assert!(!f.root.join("unexpected-execution").exists());
-                assert_eq!(
-                    fs::read_to_string(f.repo.common.join("hooks/commit-msg")).unwrap(),
-                    "#!/bin/sh\nexit 99\n"
-                );
+            let f = fixture(case);
+            persistence_fault::arm(Some(index));
+            let (result, code) = f.apply(operation(case));
+            let recorded = persistence_fault::trace();
+            persistence_fault::arm(None);
+            assert_eq!(code, 2, "{case} {index} {point:?}: {result}");
+            assert_eq!(
+                result["diagnostics"][0]["code"], "test.persistence_failure",
+                "{result}"
+            );
+            assert_eq!(recorded.last(), Some(point), "{case} {index}");
+            assert!(!f.root.join("unexpected-execution").exists());
+            assert_eq!(
+                f.apply(operation(case)).1,
+                0,
+                "resume {case} {index} {point:?}"
+            );
+            if let Some(state) = f.repo.state().unwrap()
+                && state["phase"] == "active"
+            {
+                runner::verify_owned(&f.repo, &state).unwrap();
             }
-            total += trace.len();
-            eprintln!(
-                "{case}: {} before/after publication failures recovered",
-                trace.len()
+            assert!(!f.root.join("unexpected-execution").exists());
+            assert_eq!(
+                fs::read_to_string(f.repo.common.join("hooks/commit-msg")).unwrap(),
+                "#!/bin/sh\nexit 99\n"
             );
         }
-        eprintln!("total publication boundaries exercised: {total}");
+        eprintln!(
+            "{case}: {} before/after publication failures recovered",
+            trace.len()
+        );
+    }
+    #[test]
+    fn publication_boundaries_recover_for_prepare() {
+        assert_publication_boundaries_recover("prepare");
+    }
+    #[test]
+    fn publication_boundaries_recover_for_install() {
+        assert_publication_boundaries_recover("install");
+    }
+    #[test]
+    fn publication_boundaries_recover_for_install_delegate() {
+        assert_publication_boundaries_recover("install-delegate");
+    }
+    #[test]
+    fn publication_boundaries_recover_for_install_symlink() {
+        assert_publication_boundaries_recover("install-symlink");
+    }
+    #[test]
+    fn publication_boundaries_recover_for_update_retired() {
+        assert_publication_boundaries_recover("update-retired");
+    }
+    #[test]
+    fn publication_boundaries_recover_for_approve() {
+        assert_publication_boundaries_recover("approve");
+    }
+    #[test]
+    fn publication_boundaries_recover_for_uninstall() {
+        assert_publication_boundaries_recover("uninstall");
+    }
+    #[test]
+    fn publication_boundaries_recover_for_uninstall_staged() {
+        assert_publication_boundaries_recover("uninstall-staged");
+    }
+    #[test]
+    fn publication_boundaries_recover_for_uninstall_new_config() {
+        assert_publication_boundaries_recover("uninstall-new-config");
+    }
+    #[test]
+    fn publication_boundaries_recover_for_unprepare() {
+        assert_publication_boundaries_recover("unprepare");
     }
     #[test]
     fn persistent_phase_failures_resume_without_implicit_execution() {
