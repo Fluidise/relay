@@ -18,3 +18,7 @@
 
 # Worktrees
 .worktrees/
+
+# Benchmark & test harness debris
+--version/
+.husky/

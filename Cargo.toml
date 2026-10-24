@@ -20,6 +20,9 @@ nix = { version = "0.31.3", default-features = false, features = ["process", "si
 [lints.rust]
 unsafe_code = "forbid"
 
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+
 [profile.release]
 opt-level = 3
 lto = true
