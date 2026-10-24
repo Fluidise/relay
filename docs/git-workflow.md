@@ -94,9 +94,10 @@ cargo test --all-targets
    git push -u origin <branch-name>
    ```
 3. **Pull Requests**:
-   - Open Pull Requests against `main`.
-   - Ensure the CI pipeline passes on GitHub Actions (`.github/workflows/ci.yml`).
-   - GitHub automatically deletes merged head branches (`delete_branch_on_merge: true`).
+   - Open Pull Requests against `main` **systematically in Draft mode** (`gh pr create --draft`). Draft PRs prevent premature CI runner consumption and auto-merge execution.
+   - When implementation and local verification are complete, mark the PR as ready for review (`gh pr ready`).
+   - GitHub Actions automatically runs the full CI pipeline on ready PRs (`.github/workflows/ci.yml`).
+   - Upon all checks passing (quality and test matrix), the `auto-merge` job automatically squashes and merges the PR into `main`, deleting the head branch (`delete_branch_on_merge: true`).
 4. **Automated PR Triage & Labels**:
    - Pull Requests are automatically triaged by [`.github/workflows/pr-triage.yml`](../.github/workflows/pr-triage.yml).
    - **Auto-assignment**: The PR author is automatically assigned upon opening.
