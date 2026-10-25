@@ -9,15 +9,13 @@ targets = [
 ]
 
 [advisories]
-version = 2
 vulnerability = "deny"
-unmaintained = "warn"
+unmaintained = "all"
 yanked = "warn"
 notice = "warn"
 ignore = []
 
 [licenses]
-version = 2
 unlicensed = "deny"
 allow = [
     "MIT",
@@ -29,14 +27,12 @@ allow = [
 confidence-threshold = 0.8
 
 [bans]
-version = 2
 multiple-versions = "warn"
 wildcards = "allow"
 highlight = "all"
 deny = []
 
 [sources]
-version = 2
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
