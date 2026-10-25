@@ -62,7 +62,7 @@ timeout-seconds = 60
 [[hooks.commit-msg]]
 id = "commit-policy"
 program = "fluidise-clint"
-args = ["--file", "{message-file}"]
+args = ["--file", "{message-file}", "--config", "fluidise.toml"]
 modifies-message = false
 ```
 
@@ -302,7 +302,7 @@ timeout-seconds = 60
 [[hooks.commit-msg]]
 id = "commit-policy"
 program = "fluidise-clint"
-args = ["--file", "{message-file}"]
+args = ["--file", "{message-file}", "--config", "fluidise.toml"]
 modifies-message = false
 ```
 
@@ -317,6 +317,7 @@ modifies-message = false
 ### Argument Substitution
 
 - `{message-file}`: Replaced with the absolute native path to the commit-message file **only when it occupies an entire argument string**. Substring interpolation and shell expressions are not supported.
+- Clint policy selection: `fluidise-clint` requires an explicit policy source: `--config <path>` (such as `fluidise.toml`) to read repository rules without Git discovery, or `--defaults` to use built-in conventional commit rules without a dedicated configuration section.
 
 ---
 
