@@ -123,3 +123,31 @@ For working on parallel tasks or isolating bug fixes without switching working d
 # Clean up worktree after merge
 ./scripts/worktree.sh remove feat/my-feature
 ```
+
+---
+
+## 6. Release Management & Changelog Automation
+
+Release packaging, GitHub release publication, and changelog updates are automated with [`git-cliff`](https://github.com/orhun/git-cliff) via [`.github/workflows/release.yml`](../.github/workflows/release.yml).
+
+### Triggering a Release
+
+Releases are triggered by pushing a SemVer tag (`v*.*.*`):
+
+1. **Direct Tag Push**:
+   ```bash
+   git checkout main
+   git pull origin main
+   git tag -a v0.1.0 -m "Release v0.1.0"
+   git push origin v0.1.0
+   ```
+2. **Release via Pull Request**:
+   - Merge a preparation PR into `main`.
+   - Apply the SemVer tag to the merge commit on `main` and push it to `origin`.
+
+### Automated Pipeline Workflow
+
+Upon detecting a tag push matching `v*`:
+1. **GitHub Release**: Extracts release notes for the latest tag using `git-cliff` (`cliff.toml`) and publishes the GitHub Release with markdown formatting and asset attachments if present. Pre-releases (containing `-`, e.g., `v0.1.0-rc.1`) are automatically tagged as pre-releases.
+2. **Changelog Sync**: Regenerates the complete historical [`CHANGELOG.md`](../CHANGELOG.md) according to Keep a Changelog specifications and commits it back to `main` with the commit message `chore(release): update CHANGELOG.md for <version> [skip ci]`.
+

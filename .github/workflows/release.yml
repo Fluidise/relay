@@ -1,14 +1,15 @@
-name: Release
+name: Release & Changelog
 
 on:
   push:
     tags:
+      - 'v*.*.*'
       - 'v*'
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag (e.g. v0.2.0)'
-        required: true
+        description: 'Release tag to process (e.g. v0.1.0)'
+        required: false
         default: 'v0.1.0'
 
 concurrency:
@@ -95,13 +96,16 @@ jobs:
           retention-days: 7
 
   publish:
-    name: Publish Release
+    name: Publish Release & Update Changelog
     needs: [build]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Checkout repository
+      - name: Checkout repository (full history)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Download all artifacts
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
@@ -118,18 +122,67 @@ jobs:
           echo "Aggregated SHA256 checksums:"
           cat SHA256SUMS.txt
 
-      - name: Create or update GitHub Release
+      - name: Generate Release Notes with git-cliff
+        id: git-cliff-release
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --latest --strip header
+        env:
+          OUTPUT: RELEASE_NOTES.md
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.ref_name }}
         run: |
           RELEASE_TAG="${TAG:-${{ github.event.inputs.tag }}}"
+          PRERELEASE_FLAG=""
+          if [[ "$RELEASE_TAG" == *"-"* ]]; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            echo "Uploading assets to existing release $RELEASE_TAG..."
+            echo "Uploading assets and updating release notes for $RELEASE_TAG..."
             gh release upload "$RELEASE_TAG" release-assets/* --clobber
+            gh release edit "$RELEASE_TAG" --notes-file RELEASE_NOTES.md $PRERELEASE_FLAG
           else
-            echo "Creating new release $RELEASE_TAG..."
+            echo "Creating new release $RELEASE_TAG with git-cliff notes..."
             gh release create "$RELEASE_TAG" release-assets/* \
               --title "fluidise-relay $RELEASE_TAG" \
-              --generate-notes
+              --notes-file RELEASE_NOTES.md \
+              $PRERELEASE_FLAG
+          fi
+
+      - name: Prepare main branch for changelog update
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git checkout -B main origin/main
+
+      - name: Generate complete CHANGELOG.md
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --verbose
+        env:
+          OUTPUT: CHANGELOG.md
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit and push updated CHANGELOG.md to main
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git status --porcelain CHANGELOG.md | grep -q "CHANGELOG.md"; then
+            echo "CHANGELOG.md modified. Committing and pushing back to main..."
+            git add CHANGELOG.md
+            git commit -m "chore(release): update CHANGELOG.md for ${{ github.ref_name || github.event.inputs.tag }} [skip ci]"
+            if ! git push origin main; then
+              echo "::warning::Direct push to main was declined by GitHub branch protection. Ensure GITHUB_TOKEN has push permissions or configure a release PR bypass."
+              exit 1
+            fi
+          else
+            echo "CHANGELOG.md is already up to date."
           fi
