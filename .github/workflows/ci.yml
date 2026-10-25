@@ -91,10 +91,97 @@ jobs:
       - name: Run Tests
         run: cargo test --locked --all-targets
 
+  coverage:
+    name: Coverage (Linux)
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install Rust stable with LLVM tools
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master; explicit stable toolchain
+        with:
+          toolchain: stable
+          components: llvm-tools-preview
+
+      - name: Install cargo-llvm-cov
+        run: cargo +stable install cargo-llvm-cov --version 0.9.1 --locked
+
+      - name: Generate coverage
+        run: |
+          mkdir -p target/coverage
+          cargo +stable llvm-cov --locked --all-targets --lcov --output-path target/coverage/lcov.info
+          test -s target/coverage/lcov.info
+          grep -Eq '^SF:(.*/)?src/main[.]rs$' target/coverage/lcov.info
+          grep -Eq '^DA:[0-9]+,[1-9][0-9]*(,.*)?$' target/coverage/lcov.info
+
+      - name: Preserve coverage report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-linux
+          path: target/coverage/lcov.info
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Explain fork upload policy
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        run: echo 'Codecov upload skipped for fork PR; coverage is available in the coverage-linux artifact.' >> "$GITHUB_STEP_SUMMARY"
+
+  codecov:
+    name: Upload coverage to Codecov
+    needs: coverage
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      # Do not run repository scripts or tests in this credential-bearing job.
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Download coverage report from this run
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: coverage-linux
+          path: target/coverage
+
+      - name: Upload coverage
+        id: upload
+        continue-on-error: true
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          use_oidc: true
+          version: v11.3.1
+          files: target/coverage/lcov.info
+          disable_search: true
+          fail_ci_if_error: true
+
+      - name: Report upload failure without blocking the pilot
+        if: steps.upload.outcome == 'failure'
+        run: |
+          echo '::warning::Codecov upload failed; the coverage-linux artifact remains available. The pilot is not validated.'
+          echo 'Codecov upload failed. Inspect the upload logs and coverage-linux artifact; the pilot is not validated.' >> "$GITHUB_STEP_SUMMARY"
+
   auto-merge:
     name: Auto-merge PR
-    needs: [test]
-    if: github.event_name == 'pull_request' && !github.event.pull_request.draft
+    needs: [test, coverage, codecov]
+    # A fork deliberately skips upload, but must still pass both test suites.
+    if: >-
+      ${{ !cancelled() &&
+      github.event_name == 'pull_request' && !github.event.pull_request.draft &&
+      needs.test.result == 'success' && needs.coverage.result == 'success' &&
+      (needs.codecov.result == 'success' ||
+       (needs.codecov.result == 'skipped' && github.event.pull_request.head.repo.full_name != github.repository)) }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
