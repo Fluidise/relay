@@ -495,7 +495,7 @@ fn unavailable_programs_are_never_run_during_inspection() {
 fn real_clint_through_git_and_direct_execution() {
     let f = Fixture::new();
     let binary = std::env::var("FLUIDISE_CLINT_BIN").expect("real clint executable");
-    fs::write(f.root.join("fluidise.toml"),format!("[hooks]\nversion=1\n[[hooks.commit-msg]]\nid='commit-policy'\nprogram={}\nargs=['--file','{{message-file}}']\n",json!(binary))).unwrap();
+    fs::write(f.root.join("fluidise.toml"),format!("[hooks]\nversion=1\n[[hooks.commit-msg]]\nid='commit-policy'\nprogram={}\nargs=['--file','{{message-file}}','--config','fluidise.toml']\n",json!(binary))).unwrap();
     f.apply("prepare");
     f.apply("install");
     let output = f.git(&[

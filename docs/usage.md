@@ -16,7 +16,7 @@ timeout-seconds = 60
 [[hooks.commit-msg]]
 id = "commit-policy"
 program = "fluidise-clint"
-args = ["--file", "{message-file}"]
+args = ["--file", "{message-file}", "--config", "fluidise.toml"]
 modifies-message = false
 ```
 
@@ -26,7 +26,7 @@ Commands run in array order from the target worktree root, with empty stdin. A b
 
 Command identifiers are unique ASCII `[a-z][a-z0-9-]*` of at most 64 characters. The program and argument array are required; the array may be empty. Modification permission defaults to false. A declared modifier can precede clint; clint should be last. Unexpected message modification by a check-only command blocks the remaining chain and retains the modified file. There is no rollback of arbitrary external effects.
 
-Clint reads the supplied file without reproducing Git's final message cleanup. Relay does not promise identical validation of the final cleaned commit text across all Git modes. Local hooks can also be bypassed by Git mechanisms such as `--no-verify`; this is not server-side enforcement.
+Clint reads the supplied file without reproducing Git's final message cleanup. Clint requires an explicit policy source: `--config <path>` (such as `fluidise.toml`) to read repository rules without Git discovery, or `--defaults` to enforce standard conventional commits. Relay does not promise identical validation of the final cleaned commit text across all Git modes. Local hooks can also be bypassed by Git mechanisms such as `--no-verify`; this is not server-side enforcement.
 
 ## Inspect before each mutation
 
