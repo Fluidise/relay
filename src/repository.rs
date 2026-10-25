@@ -52,8 +52,223 @@ fn git_output_line(out: Output) -> Result<OsString> {
     }
     Ok(OsString::from_vec(bytes))
 }
+fn split_config_key(key: &str) -> Option<(&str, Option<&str>, &str)> {
+    let dot1 = key.find('.')?;
+    let section = &key[..dot1];
+    let remainder = &key[dot1 + 1..];
+    if let Some(dot2) = remainder.rfind('.') {
+        let subsection = &remainder[..dot2];
+        let var = &remainder[dot2 + 1..];
+        Some((section, Some(subsection), var))
+    } else {
+        Some((section, None, remainder))
+    }
+}
+
+fn unescape_git_config_value(mut v: &[u8]) -> Vec<u8> {
+    if v.len() >= 2 && v.first() == Some(&b'"') && v.last() == Some(&b'"') {
+        v = &v[1..v.len() - 1];
+    }
+    let mut out = Vec::with_capacity(v.len());
+    let mut i = 0;
+    while i < v.len() {
+        if v[i] == b'\\' && i + 1 < v.len() {
+            match v[i + 1] {
+                b'n' => out.push(b'\n'),
+                b't' => out.push(b'\t'),
+                b'\\' => out.push(b'\\'),
+                b'"' => out.push(b'"'),
+                b'b' => out.push(0x08),
+                other => {
+                    out.push(other);
+                }
+            }
+            i += 2;
+        } else {
+            out.push(v[i]);
+            i += 1;
+        }
+    }
+    out
+}
+
+fn fast_config_values(file: &Path, key: &str) -> Result<Option<Vec<OsString>>> {
+    let (target_sec, target_sub, target_var) = match split_config_key(key) {
+        Some(parts) => parts,
+        None => return Ok(None),
+    };
+    let content = match fs::read(file) {
+        Ok(c) => c,
+        Err(_) => return Ok(None),
+    };
+    let mut current_sec: Option<String> = None;
+    let mut current_sub: Option<String> = None;
+    let mut values = Vec::new();
+
+    for line in content.split(|&b| b == b'\n') {
+        let mut trimmed = line;
+        while let Some(&b) = trimmed.first() {
+            if b == b' ' || b == b'\t' || b == b'\r' {
+                trimmed = &trimmed[1..];
+            } else {
+                break;
+            }
+        }
+        while let Some(&b) = trimmed.last() {
+            if b == b' ' || b == b'\t' || b == b'\r' {
+                trimmed = &trimmed[..trimmed.len() - 1];
+            } else {
+                break;
+            }
+        }
+        if trimmed.is_empty() || trimmed[0] == b'#' || trimmed[0] == b';' {
+            continue;
+        }
+        if trimmed[0] == b'[' {
+            let Some(end) = trimmed.iter().rposition(|&b| b == b']') else {
+                return Ok(None);
+            };
+            let inside = match std::str::from_utf8(&trimmed[1..end]) {
+                Ok(s) => s.trim(),
+                Err(_) => return Ok(None),
+            };
+            if let Some(space_idx) = inside.find(|c: char| c.is_whitespace()) {
+                let sec = inside[..space_idx].trim();
+                let mut sub = inside[space_idx..].trim();
+                if sub.starts_with('"') && sub.ends_with('"') && sub.len() >= 2 {
+                    sub = &sub[1..sub.len() - 1];
+                }
+                current_sec = Some(sec.to_ascii_lowercase());
+                current_sub = Some(sub.to_string());
+            } else {
+                current_sec = Some(inside.to_ascii_lowercase());
+                current_sub = None;
+            }
+            continue;
+        }
+        let Some(eq_idx) = trimmed.iter().position(|&b| b == b'=') else {
+            let k_str = match std::str::from_utf8(trimmed) {
+                Ok(s) => s.trim(),
+                Err(_) => return Ok(None),
+            };
+            if let Some(sec) = &current_sec
+                && sec.eq_ignore_ascii_case(target_sec)
+                && current_sub.as_deref() == target_sub
+                && k_str.eq_ignore_ascii_case(target_var)
+            {
+                values.push(OsString::from("true"));
+            }
+            continue;
+        };
+        let k_bytes = &trimmed[..eq_idx];
+        let v_bytes = &trimmed[eq_idx + 1..];
+        let k_str = match std::str::from_utf8(k_bytes) {
+            Ok(s) => s.trim(),
+            Err(_) => return Ok(None),
+        };
+        if let Some(sec) = &current_sec
+            && sec.eq_ignore_ascii_case(target_sec)
+            && current_sub.as_deref() == target_sub
+            && k_str.eq_ignore_ascii_case(target_var)
+        {
+            let mut v = v_bytes;
+            while let Some(&b) = v.first() {
+                if b == b' ' || b == b'\t' {
+                    v = &v[1..];
+                } else {
+                    break;
+                }
+            }
+            while let Some(&b) = v.last() {
+                if b == b' ' || b == b'\t' {
+                    v = &v[..v.len() - 1];
+                } else {
+                    break;
+                }
+            }
+            let unescaped = unescape_git_config_value(v);
+            values.push(OsString::from_vec(unescaped));
+        }
+    }
+    Ok(Some(values))
+}
+
+fn discover_in_process(path: &Path) -> Option<Repo> {
+    let canonical = fs::canonicalize(path).ok()?;
+    let mut current = if canonical.is_file() {
+        canonical.parent()?
+    } else {
+        canonical.as_path()
+    };
+    loop {
+        let dotgit = current.join(".git");
+        if dotgit.is_dir() {
+            let git = fs::canonicalize(&dotgit).ok()?;
+            let common = if git.join("commondir").is_file() {
+                let content = fs::read_to_string(git.join("commondir")).ok()?;
+                fs::canonicalize(git.join(content.trim())).ok()?
+            } else {
+                git.clone()
+            };
+            let root =
+                if let Ok(Some(vals)) = fast_config_values(&git.join("config"), "core.worktree") {
+                    if let Some(wt) = vals.first() {
+                        let wt_path = PathBuf::from(wt);
+                        if wt_path.is_absolute() {
+                            fs::canonicalize(wt_path).ok()?
+                        } else {
+                            fs::canonicalize(git.join(wt_path)).ok()?
+                        }
+                    } else {
+                        current.to_path_buf()
+                    }
+                } else {
+                    current.to_path_buf()
+                };
+            return Some(Repo {
+                local: git.join("fluidise-relay"),
+                shared: common.join("fluidise-relay-common"),
+                root,
+                git,
+                common,
+            });
+        } else if dotgit.is_file() {
+            let content = fs::read_to_string(&dotgit).ok()?;
+            for line in content.lines() {
+                let trimmed = line.trim();
+                if let Some(rest) = trimmed.strip_prefix("gitdir:") {
+                    let gitdir_path = rest.trim();
+                    let git = fs::canonicalize(current.join(gitdir_path)).ok()?;
+                    let root = current.to_path_buf();
+                    let common = if git.join("commondir").is_file() {
+                        let c = fs::read_to_string(git.join("commondir")).ok()?;
+                        fs::canonicalize(git.join(c.trim())).ok()?
+                    } else {
+                        git.clone()
+                    };
+                    return Some(Repo {
+                        local: git.join("fluidise-relay"),
+                        shared: common.join("fluidise-relay-common"),
+                        root,
+                        git,
+                        common,
+                    });
+                }
+            }
+        }
+        match current.parent() {
+            Some(parent) => current = parent,
+            None => break,
+        }
+    }
+    None
+}
+
 impl Repo {
     pub fn discover(path: &Path) -> Result<Self> {
+        if let Some(repo) = discover_in_process(path) {
+            return Ok(repo);
+        }
         let root = PathBuf::from(git_line(
             path,
             &["rev-parse".as_ref(), "--show-toplevel".as_ref()],
@@ -292,6 +507,15 @@ fn config_values(repo: &Repo, file: &Path, key: &str, includes: bool) -> Result<
             "git.config_unsupported",
             "Git configuration must be a regular file",
         ));
+    }
+    if !includes && let Ok(Some(parsed)) = fast_config_values(file, key) {
+        if parsed.len() > 1 {
+            return Err(Failure::new(
+                "git.config_unsupported",
+                "Managed Git keys must have at most one local value",
+            ));
+        }
+        return Ok(parsed);
     }
     let out = git_at(
         &repo.root,
