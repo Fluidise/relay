@@ -652,6 +652,14 @@ pub struct Locks {
     _common: File,
     _local: Option<File>,
 }
+impl Drop for Locks {
+    fn drop(&mut self) {
+        let _ = rustix::fs::flock(&self._common, rustix::fs::FlockOperation::Unlock);
+        if let Some(local) = &self._local {
+            let _ = rustix::fs::flock(local, rustix::fs::FlockOperation::Unlock);
+        }
+    }
+}
 pub fn locks(repo: &Repo, write: bool) -> Result<Locks> {
     // Administrative directory inodes already exist and remain stable across
     // atomic config writes. Locking them needs no bootstrap writes or unlinking.
@@ -668,11 +676,30 @@ pub fn locks(repo: &Repo, write: bool) -> Result<Locks> {
         } else {
             rustix::fs::FlockOperation::NonBlockingLockShared
         };
-        rustix::fs::flock(&file, op).map_err(|e| Failure::new("lock.contended", e))?;
-        Ok(file)
+        let mut attempts = 0;
+        loop {
+            match rustix::fs::flock(&file, op) {
+                Ok(()) => return Ok(file),
+                Err(e)
+                    if (e == rustix::io::Errno::WOULDBLOCK || e == rustix::io::Errno::AGAIN)
+                        && attempts < 10 =>
+                {
+                    attempts += 1;
+                    std::thread::sleep(std::time::Duration::from_millis(5));
+                }
+                Err(e) => return Err(Failure::new("lock.contended", e)),
+            }
+        }
     }
+    use std::os::unix::fs::MetadataExt;
     let common = lock(&repo.common, write)?;
-    let local = if repo.git == repo.common {
+    let same_target = repo.git == repo.common
+        || (if let (Ok(m1), Ok(m2)) = (repo.common.metadata(), repo.git.metadata()) {
+            m1.dev() == m2.dev() && m1.ino() == m2.ino()
+        } else {
+            false
+        });
+    let local = if same_target {
         None
     } else {
         Some(lock(&repo.git, write)?)
