@@ -10,7 +10,7 @@
 
 <p align="center">
     <a href="https://www.rust-lang.org">
-        <img src="https://img.shields.io/badge/rustc-1.88%2B-informational?style=flat&labelColor=24141E&color=603840&logo=Rust&logoColor=white" alt="Rust 1.88+"></a>
+        <img src="https://img.shields.io/badge/rustc-1.99.1%2B-informational?style=flat&labelColor=24141E&color=603840&logo=Rust&logoColor=white" alt="Rust 1.99.1+"></a>
     <a href="https://github.com/Fluidise/relay/actions/workflows/ci.yml">
         <img src="https://img.shields.io/github/actions/workflow/status/Fluidise/relay/ci.yml?branch=main&style=flat&labelColor=24141E&color=603840&logo=GitHub%20Actions&logoColor=white" alt="CI Status"></a>
     <a href="LICENSE">
@@ -179,7 +179,7 @@ See the complete 5-workload suite, CPU cycle profiling, and agent ergonomics ana
 ### Prerequisites
 
 - Unix-based operating system (macOS or Linux; Windows is not supported).
-- [Rust](https://www.rust-lang.org/) toolchain (MSRV 1.88, edition 2024; repository pins Rust 1.99.1 in `rust-toolchain.toml`).
+- [Rust](https://www.rust-lang.org/) toolchain (MSRV 1.99.1, edition 2024; repository pins Rust 1.99.1 in `rust-toolchain.toml`).
 - Git (2.20+) and standard `/bin/sh` for the installed launcher shim.
 
 ### Building from Source
