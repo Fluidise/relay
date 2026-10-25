@@ -1,0 +1,11 @@
+# Welcome — https://github.com/behaviorbot/welcome
+newIssueWelcomeComment: |
+  👋 Thanks for opening your first issue! Great to have you here.
+  Security concern? Please [report it privately](https://github.com/Fluidise/relay/blob/main/SECURITY.md).
+
+newPRWelcomeComment: |
+  🌱 Congrats on your first PR, and thanks for contributing!
+  See our [contribution guide](https://github.com/Fluidise/relay/blob/main/CONTRIBUTING.md), and keep it in Draft until ready.
+
+firstPRMergeComment: |
+  🎉 Congrats on your first merged PR! Thanks for making fluidise-relay better.
