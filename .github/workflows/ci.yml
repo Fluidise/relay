@@ -52,15 +52,18 @@ jobs:
           fi
           echo "✅ PR title is valid: '$PR_TITLE'"
 
-      - name: Verify MSRV (Rust 1.88.0)
+      - name: Verify MSRV (Rust 1.99.1)
         run: |
-          rustup toolchain install 1.88.0 --profile minimal --no-self-update
-          cargo +1.88.0 check --locked --all-targets
+          rustup toolchain install 1.99.1 --profile minimal --no-self-update
+          cargo +1.99.1 check --locked --all-targets
 
       - name: Security audit
         uses: actions-rust-lang/audit@72c09e02f132669d52284a3323acdb503cfc1a24 # v1
         with:
           createIssues: false
+
+      - name: License and supply-chain audit (cargo-deny)
+        uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2
 
   test:
     name: Test (${{ matrix.os }})

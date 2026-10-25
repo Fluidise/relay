@@ -4,7 +4,7 @@
 
 `fluidise-relay` is a standalone, agent-first Git hook manager written in Rust. It safely orchestrates Git hooks (beginning with `commit-msg` in V1), enforces explicit declarative configuration, provides structured JSON output by default, and guarantees process safety and clean cleanup.
 
-- **Stack**: Rust 2024 edition (MSRV 1.88), Cargo.
+- **Stack**: Rust 2024 edition (MSRV 1.99.1), Cargo.
 - **Remote & Delivery**: All development and branches go directly to **GitHub** (`Fluidise/relay`).
 - **Specifications**: See cross-cutting architecture records in `Fluidise/core` (`docs/hook-manager-v1.md`).
 
