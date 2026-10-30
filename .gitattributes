@@ -1,0 +1,2 @@
+# Runtime notice hashes cover exact upstream bytes.
+licenses/runtime/** -text

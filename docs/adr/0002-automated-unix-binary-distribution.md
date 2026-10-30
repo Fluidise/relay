@@ -64,3 +64,18 @@ Déclarer les métadonnées de distribution dans [`Cargo.toml`](../../Cargo.toml
 - Validation syntaxique et schema `Cargo.toml` : `cargo check --locked --all-targets` vert.
 - Validation YAML du workflow : conforme à GitHub Actions avec actions épinglées par SHA complet.
 - Lints et formatage : `cargo fmt` et `cargo clippy` validés sans avertissement.
+
+
+## Addendum du 30 octobre 2026 : publication 0.1.0
+
+Le [mandat de publication](../decisions/release-0.1.0.md) conserve les six cibles
+Unix, ajoute crates.io et le tap Homebrew macOS comme canaux complémentaires, et
+remplace la recette `cross` par des builds sur runners natifs. Le workflow
+réutilisable est la source effective de la matrice ; les métadonnées cargo-dist
+non utilisées sont retirées. Les archives incluent désormais provenance,
+inventaire vérifié et notices des tiers. La release ne met plus à jour le
+changelog par push direct et ne remplace pas d'assets publiés.
+
+La compatibilité de chaque cible doit être prouvée par l'exécution distante du
+binaire extrait. Les seules validations statiques historiques de cette ADR ne
+constituent pas une preuve de publication ou de fonctionnement multi-plateforme.

@@ -2,7 +2,7 @@
 
 Relay orchestrates explicitly configured commands for `commit-msg`. It does not contain clint's policy engine, modify `fluidise.toml`, stage changes or provide a server-side contribution gate. Each configured tool remains independently usable.
 
-This implementation is not a published release or a demonstrated four-platform distribution. Build with the pinned Rust 1.99.1 toolchain using `cargo build --locked --release`; users of an eventual distributed binary will not need Cargo. Do not activate actual repository hooks until the separate installation scope is approved.
+For installation channels and release verification, see the [distribution runbook](https://github.com/Fluidise/relay/blob/main/docs/distribution.md). To build from source, use the pinned Rust 1.99.1 toolchain and `cargo build --locked --release`; prebuilt binaries do not require Cargo. Installing the binary does not activate hooks. Do not activate actual repository hooks until the separate installation scope is approved.
 
 ## Configure the chain
 

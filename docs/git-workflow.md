@@ -128,26 +128,17 @@ For working on parallel tasks or isolating bug fixes without switching working d
 
 ## 6. Release Management & Changelog Automation
 
-Release packaging, GitHub release publication, and changelog updates are automated with [`git-cliff`](https://github.com/orhun/git-cliff) via [`.github/workflows/release.yml`](../.github/workflows/release.yml).
+Release packaging and GitHub publication use [`.github/workflows/release.yml`](../.github/workflows/release.yml)
+and the reusable [distribution matrix](../.github/workflows/distribution.yml).
+See [the distribution runbook](distribution.md) for crates.io and Homebrew.
 
-### Triggering a Release
+A release requires a stable `vMAJOR.MINOR.PATCH` tag matching Cargo, pointing at
+an already validated commit on `main`. Pushing that tag builds and tests all six
+Unix archives. Manual dispatch takes an existing tag; it does not release the
+branch named by the dispatch event. Publication refuses existing releases rather
+than overwriting assets. No release job commits or pushes a changelog to `main`.
 
-Releases are triggered by pushing a SemVer tag (`v*.*.*`):
-
-1. **Direct Tag Push**:
-   ```bash
-   git checkout main
-   git pull origin main
-   git tag -a v0.1.0 -m "Release v0.1.0"
-   git push origin v0.1.0
-   ```
-2. **Release via Pull Request**:
-   - Merge a preparation PR into `main`.
-   - Apply the SemVer tag to the merge commit on `main` and push it to `origin`.
-
-### Automated Pipeline Workflow
-
-Upon detecting a tag push matching `v*`:
-1. **GitHub Release**: Extracts release notes for the latest tag using `git-cliff` (`cliff.toml`) and publishes the GitHub Release with markdown formatting and asset attachments if present. Pre-releases (containing `-`, e.g., `v0.1.0-rc.1`) are automatically tagged as pre-releases.
-2. **Changelog Sync**: Regenerates the complete historical [`CHANGELOG.md`](../CHANGELOG.md) according to Keep a Changelog specifications and commits it back to `main` with the commit message `chore(release): update CHANGELOG.md for <version> [skip ci]`.
-
+The regular CI waits for the distribution matrix before its existing automatic
+merge job. Independent review is required for the initial 0.1.0 preparation under
+the user's release mandate. Crates.io upload and the Homebrew tap update remain
+separate, explicitly authorized operations; a green build is not publication.
