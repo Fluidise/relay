@@ -39,6 +39,9 @@ jobs:
       - name: Run Clippy
         run: cargo clippy --locked --all-targets -- -D warnings
 
+      - name: Verify crates.io package without uploading
+        run: cargo publish --dry-run --locked --registry crates-io
+
       - name: Validate PR title (Conventional Commits)
         if: github.event_name == 'pull_request'
         env:
@@ -172,14 +175,20 @@ jobs:
           echo '::warning::Codecov upload failed; the coverage-linux artifact remains available. The pilot is not validated.'
           echo 'Codecov upload failed. Inspect the upload logs and coverage-linux artifact; the pilot is not validated.' >> "$GITHUB_STEP_SUMMARY"
 
+  distribution:
+    name: Verify distribution matrix
+    needs: quality
+    uses: ./.github/workflows/distribution.yml
+
   auto-merge:
     name: Auto-merge PR
-    needs: [test, coverage, codecov]
+    needs: [test, coverage, codecov, distribution]
     # A fork deliberately skips upload, but must still pass both test suites.
     if: >-
       ${{ !cancelled() &&
       github.event_name == 'pull_request' && !github.event.pull_request.draft &&
       needs.test.result == 'success' && needs.coverage.result == 'success' &&
+      needs.distribution.result == 'success' &&
       (needs.codecov.result == 'success' ||
        (needs.codecov.result == 'skipped' && github.event.pull_request.head.repo.full_name != github.repository)) }}
     runs-on: ubuntu-latest

@@ -1,0 +1,86 @@
+name: Candidate distribution (no publication)
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      source:
+        description: 'Exact source commit; empty checks out the triggering event'
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  candidate:
+    name: Candidate (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            runner: macos-15
+          - target: x86_64-apple-darwin
+            runner: macos-15-intel
+          - target: aarch64-unknown-linux-musl
+            runner: ubuntu-24.04-arm
+          - target: x86_64-unknown-linux-musl
+            runner: ubuntu-24.04
+          - target: aarch64-unknown-linux-gnu
+            runner: ubuntu-24.04-arm
+          - target: x86_64-unknown-linux-gnu
+            runner: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.source || github.sha }}
+
+      - name: Set up packaging Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: '3.15'
+
+      - name: Install declared Rust toolchain, target and copyright inventory
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          rustup show active-toolchain || rustup toolchain install
+          rustup target add "$TARGET"
+          rustup component add rust-docs
+
+      - name: Install native musl linker
+        if: endsWith(matrix.target, '-musl')
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes musl-tools
+
+      - name: Test packaging invariants
+        run: python -m unittest discover -s tests -p 'test_distribution.py' -v
+
+      - name: Build, package, verify inventory and execute extracted candidate
+        env:
+          TARGET: ${{ matrix.target }}
+        run: python scripts/distribution.py prepare --target "$TARGET" --output "$RUNNER_TEMP/relay-distribution"
+
+      - name: Rehearse Homebrew install and test in a temporary prefix
+        if: runner.os == 'macOS'
+        run: python scripts/homebrew.py rehearse --distribution "$RUNNER_TEMP/relay-distribution"
+
+      - name: Retain verified test archives only
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: relay-candidate-${{ matrix.target }}
+          path: ${{ runner.temp }}/relay-distribution/*.tar.gz*
+          if-no-files-found: error
+          retention-days: 7

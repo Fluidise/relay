@@ -1,0 +1,14 @@
+{
+  "files": {
+    "COPYRIGHT": "f9bc4423732350eb0b3f7ed7e91d530298476f8fec0c6c427a1c04ade22655af",
+    "UPSTREAM-NOTICES.txt": "c467cf8388807c98680a00d08208a724fab6a91ce1c6ce87b1ccd344929e11c2"
+  },
+  "rust_commit": "58cf8f9c35b355199727627d07ae34a4e2846d67",
+  "rust_release": "1.99.1",
+  "sources": {
+    "archive": "https://www.musl-libc.org/releases/musl-1.2.5.tar.gz",
+    "archive_sha256": "a9a118bbe84d8764da0ea0d28b3ab3fae8477fc7e4085d90102b8596fc7c75e4",
+    "patches": "Rust 1.99.1 applies musl security patches; this is a conservative upstream notice inventory, not a claim that the linked runtime is unmodified.",
+    "rust_build": "https://github.com/rust-lang/rust/blob/58cf8f9c35b355199727627d07ae34a4e2846d67/src/ci/docker/scripts/musl-toolchain.sh"
+  }
+}

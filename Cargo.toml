@@ -3,7 +3,11 @@ name = "fluidise-relay"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.99.1"
-publish = false
+publish = ["crates-io"]
+description = "Agent-first Git hook manager with explicit plans and safe process orchestration"
+repository = "https://github.com/Fluidise/relay"
+readme = "README.md"
+include = ["/src/", "/tests/*.rs", "/Cargo.lock", "/LICENSE", "/README.md", "/docs/usage.md"]
 license = "MIT"
 
 [dependencies]
@@ -33,17 +37,3 @@ strip = true
 # Recovery tests repeatedly hash native delegates; keep this work optimized.
 [profile.test]
 opt-level = 1
-
-[package.metadata.dist]
-cargo-dist-version = "0.28.0"
-rust-toolchain-version = "1.99.1"
-ci = ["github"]
-installers = ["shell"]
-targets = [
-    "x86_64-unknown-linux-gnu",
-    "x86_64-unknown-linux-musl",
-    "aarch64-unknown-linux-gnu",
-    "aarch64-unknown-linux-musl",
-    "x86_64-apple-darwin",
-    "aarch64-apple-darwin",
-]

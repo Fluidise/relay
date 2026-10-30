@@ -1,0 +1,15 @@
+{
+  "files": {
+    "compiler-builtins-LICENSE.txt": "ab6eec6caf0fa5775e411c7a8bc6a45c4ef2956b0980b157ab74fc5cd62a928b",
+    "compiler-rt-CREDITS.txt": "a9901f47a089da41e4690682d00ce4cedaa2baf41fedbe79beee366d43ac2461",
+    "compiler-rt-LICENSE.txt": "1a8f1058753f1ba890de984e48f0242a3a5c29a6a8f2ed9fd813f36985387e8d",
+    "libunwind-LICENSE.txt": "b5efebcaca80879234098e52d1725e6d9eb8fb96a19fce625d39184b705f7b6d"
+  },
+  "rust_commit": "58cf8f9c35b355199727627d07ae34a4e2846d67",
+  "rust_release": "1.99.1",
+  "sources": {
+    "compiler-builtins": "https://github.com/rust-lang/rust/blob/58cf8f9c35b355199727627d07ae34a4e2846d67/library/compiler-builtins/LICENSE.txt",
+    "compiler-rt": "https://github.com/rust-lang/llvm-project/tree/1b9c0d5ff9bbe7634aead059efe6b11a7eeba145/compiler-rt",
+    "libunwind": "https://github.com/rust-lang/llvm-project/tree/1b9c0d5ff9bbe7634aead059efe6b11a7eeba145/libunwind"
+  }
+}
