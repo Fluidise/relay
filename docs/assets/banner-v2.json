@@ -1,0 +1,98 @@
+{
+  "status": "Approved artwork integrated into the README banner.",
+  "created_on": "2026-11-05",
+  "purpose": "Fluidise relay README banner",
+  "dimensions": {
+    "width": 2048,
+    "height": 768,
+    "aspect_ratio": "8:3"
+  },
+  "direction": "Simplified painterly petroleum-green/emerald coastal islands with a gentle connecting tidal current.",
+  "generation": {
+    "tool": "Built-in image_gen tool",
+    "mode": "style-transfer with separately composed official branding",
+    "generated_file": "exec-f39d208c-1bfa-4bc3-baea-da84ddebd8ed.png",
+    "background": "banner-v2-background.png",
+    "background_sha256": "a35378dcd05159f5139f859db321241df900d812c32a9a9f768458f910556b1b",
+    "prompt": "Use case: style-transfer.\nAsset type: production background artwork for the Fluidise Relay GitHub README banner, exact panoramic 8:3 composition, target 2048 × 768 pixels, opaque.\nInput images, in order:\n1. Edit target and project identity: existing Relay banner. Reimagine its petroleum-green / emerald coastal islands and connecting tidal currents in a new simplified painterly treatment. REMOVE all existing wordmark and bracket-face logo; branding will be composited separately. Its intricate rocks, photoreal moss and busy white foam are NOT the rendering target.\n2. Primary family rendering reference: newly approved Clint background. Match its soft broad painted masses, restrained brushwork, few clearly spaced depth planes, atmospheric light, graceful silhouettes and quiet open composition. Do not copy trees, woodland or purple palette.\n3. Supporting rendering reference: Suspended Archipelago painting. Match its soft matte painterly atmosphere and simplification, not its floating island, composition or blue/lavender color.\n\nPrimary request: create an original tranquil maritime Relay world in the same painted family as the approved Clint background. A few broad grounded coastal islands rise from calm petroleum-green and emerald sea. One graceful pale tidal current leads the eye between the islands toward a softly lit open horizon. The dominant motif is a continuous gentle marine flow connecting the open spaces, not a storm, vortex, neon route or literal diagram.\nComposition: design natively for a very wide shallow 2048x768 banner. A subdued dark-teal coastal ledge at lower left; one broad green/mineral island in the left-middle distance; a complementary island toward the right-middle distance; a few quiet distant silhouettes fading into haze, generous open water and a spacious upper sky. Keep a single clear curved current through the open channel. Three or four legible depth planes, large quiet areas, natural scale and breathing room. Reserve a naturally dark, quiet lower-left region x=60..880, y=540..710 for a later separate white logo and FLUIDISE-RELAY name. No artificial rectangle, panel, lettering or painted logo.\nTreatment: clearly illustrated, broad coherent hand-painted color shapes, matte rock planes, simplified vegetation masses without individual leaves or realistic moss, soft controlled paint texture. Paint the water as large quiet green/teal masses with a few broad soft current strokes; not a foamy noise field. Grandeur from spacing and atmosphere, not microdetail. Softly luminous and contemplative like reference 2, not gloomy. Keep enough value separation to distinguish foreground, islands and horizon.\nPalette: distinct Relay dominant deep petroleum green, muted teal and emerald, with restrained pale sage/cream sky and warm ivory horizon light. Natural quiet color, not saturated turquoise, not blue Archipelago and not Clint plum. A little muted ochre on lit rock is acceptable, but green/teal must dominate.\nConstraints: one edge-to-edge painted background, no text, letters, symbols, logo, watermark, border, frame, UI or comparison panels. No floating islands, planets, forest passage, boats, buildings, people, animals, technological objects, waterfalls or light trails. No photorealism, CGI, intricate cliff textures, over-sharpened water, dense foam, dramatic crashing waves, storm sky, thick impasto, HDR or heavy artificial vignette. Keep the lower-left branding space calm and dark enough for later white text without obscuring the scene.",
+    "references": [
+      {
+        "role": "Existing project setting, palette and identity; not detail density",
+        "source": "Fluidise/relay@3b5588aecc0d7dbe1493bb3ef1f9c72fa1e15cba:docs/assets/banner.png",
+        "sha256": "b473c25f597ec406b79c388782c95c617dc3f0aff7cc984eae27d6bd145d8452"
+      },
+      {
+        "role": "Primary approved simplified painterly family rendering",
+        "source": "Local, uncommitted Fluidise/clint preview: docs/assets/banner-v2-background.png",
+        "sha256": "833dc0e65776ab12a6df6548276f5c0e9f261d29312eecc50717e6b8205d446f"
+      },
+      {
+        "role": "Supporting soft painted atmosphere and simplified landforms; not island composition or palette",
+        "source": "Fluidise/site:assets/plates/suspended-archipelago.png",
+        "sha256": "4317705a599f0c5662bce6b76f950053991347dc83188ef054f2150f905f6f1e"
+      }
+    ]
+  },
+  "branding": {
+    "method": "Separate deterministic overlays using existing local Sharp 0.35.5; no AI-generated logo or text.",
+    "logo": {
+      "source": "Fluidise/core:assets/brand/logo-white.svg",
+      "sha256": "408cf002c6d8cb7c726fb6d4e92429d3394b750fdd69a807fa5296195bc870aa",
+      "left": 64,
+      "top": 576,
+      "width": 128,
+      "height": 128,
+      "geometry": "Official unchanged W1/B; full square viewBox, original transparent margins and proportions retained"
+    },
+    "text": {
+      "content": "FLUIDISE-RELAY",
+      "font": "Arial 64",
+      "fontfile_name": "Arial.ttf",
+      "fontfile_sha256": "525979822591a3447cfc49d943d6f7683508e25543407871c0ed8fed05fd2bd9",
+      "color": "#ffffff",
+      "letter_spacing_pango_units": 4096,
+      "dpi": 72,
+      "left": 224,
+      "top": 616,
+      "width": 563,
+      "height": 48
+    }
+  },
+  "output": {
+    "file": "banner.png",
+    "sha256": "49f3bdd7e5866c279a2485ddb0cdffaf27f727e149b59e92423b61d44ea5e9cd"
+  },
+  "verification": {
+    "dimensions": "2048x768 PNG; opaque",
+    "source_copy": "Background copied byte-for-byte from built-in generation",
+    "background_pixels_changed_outside_branding_rectangles": 0,
+    "minimum_white_branding_contrast_on_background": 7.56,
+    "contrast_scope": "Background samples beneath branding pixels with alpha >= 250/255; not a full accessibility conformance audit",
+    "checked_branding_pixels": 10165,
+    "historical_preview_preserved_files": [
+      {
+        "name": "README.md",
+        "sha256": "b837671a769d1a890c0adabc9fc34a3c5198208efe0f819464308df1cddc433b"
+      },
+      {
+        "name": "docs/assets/banner.png",
+        "sha256": "b473c25f597ec406b79c388782c95c617dc3f0aff7cc984eae27d6bd145d8452"
+      }
+    ],
+    "integrated_banner_matches_approved_candidate": true,
+    "current_readme_sha256": "bfba550aa647765dc841f08c62e2792baaa95d3878bbf6d7997d731e84e694d9"
+  },
+  "approval": {
+    "state": "approved",
+    "recorded_on": "2026-11-05",
+    "evidence": "User reply: oui je valide les 2",
+    "scope": "Core and Relay README banners; local replacement only."
+  },
+  "integration": {
+    "destination": "docs/assets/banner.png",
+    "sha256": "49f3bdd7e5866c279a2485ddb0cdffaf27f727e149b59e92423b61d44ea5e9cd",
+    "method": "Byte-for-byte copy of the approved branded candidate into the existing README image path.",
+    "previous_banner_sha256": "b473c25f597ec406b79c388782c95c617dc3f0aff7cc984eae27d6bd145d8452",
+    "readme_unchanged": true
+  }
+}
