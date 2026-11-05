@@ -1293,8 +1293,25 @@ fn delegated_native_environment_is_not_rewritten_by_a_shell() {
     let f = Fixture::new();
     let source = f.root.join(".git/hooks");
     fs::create_dir(&source).unwrap();
-    // env is a native executable: no source-hook interpreter can hide mutations.
-    std::os::unix::fs::symlink("/usr/bin/env", source.join("pre-commit")).unwrap();
+    // Compile a native probe instead of relying on the host's multicall utilities.
+    let probe = f.root.join("native-env-probe");
+    let compiler = std::env::var_os("RUSTC").unwrap_or_else(|| "rustc".into());
+    let build = Command::new(compiler)
+        .arg("--edition=2024")
+        .arg(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/native_env.rs"
+        ))
+        .arg("-o")
+        .arg(&probe)
+        .output()
+        .unwrap();
+    assert!(
+        build.status.success(),
+        "native environment probe failed to build: {}",
+        String::from_utf8_lossy(&build.stderr)
+    );
+    std::os::unix::fs::symlink(&probe, source.join("pre-commit")).unwrap();
     let invoke = |path: &Path| {
         Command::new(path)
             .current_dir(&f.root)
@@ -1305,21 +1322,33 @@ fn delegated_native_environment_is_not_rewritten_by_a_shell() {
             .unwrap()
     };
     let before = invoke(&source.join("pre-commit"));
-    assert!(before.status.success());
+    assert!(
+        before.status.success(),
+        "native source hook failed: {}",
+        String::from_utf8_lossy(&before.stderr)
+    );
+    for sentinel in [
+        &b"OLDPWD=/fixture/sentinel"[..],
+        &b"PWD=/fixture/unchanged-pwd"[..],
+        &b"RELAY_TEST_ENV=native\nvalue"[..],
+    ] {
+        assert!(
+            before
+                .stdout
+                .split(|&byte| byte == 0)
+                .any(|entry| entry == sentinel)
+        );
+    }
     f.ready("exit 0", false);
     let after = invoke(&f.root.join(".git/fluidise-relay/hooks/pre-commit"));
     assert_eq!(after.status, before.status);
-    let entries = |bytes: Vec<u8>| {
-        let mut entries: Vec<_> = String::from_utf8(bytes)
-            .unwrap()
-            .lines()
-            .map(str::to_owned)
-            .collect();
+    let entries = |bytes: &[u8]| {
+        let mut entries: Vec<_> = bytes.split(|&byte| byte == 0).map(<[u8]>::to_vec).collect();
         entries.sort();
         entries
     };
     assert!(
-        entries(after.stdout) == entries(before.stdout),
+        entries(&after.stdout) == entries(&before.stdout),
         "delegation changed the inherited environment"
     );
     assert_eq!(after.stderr, before.stderr);
